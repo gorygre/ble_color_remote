@@ -20,16 +20,19 @@ static struct bt_uuid_16 service_uuid = BT_UUID_INIT_16(0xFFE0);
 static struct bt_uuid_16 char_uuid = BT_UUID_INIT_16(0xFFE1);
 static struct bt_gatt_discover_params discover_params;
 static struct bt_gatt_write_params write_params;
-static char data[] = { 0x7E, 0x07, 0x05, 0x03, 0xFF, 0xFF, 0xFF, 0x00, 0xEF };
+static char data[] = { 0x7E, 0x07, 0x05, 0x03, 0xCC, 0x88, 0x99, 0x00, 0xEF };
+static uint16_t att_handle = 1;
 
 void written(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params* params)
 {
 	printk("Write successful\n");
+	printk("[err] 0x%X\n", err);
 	bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 }
 
 void write(struct bt_conn *conn, uint16_t handle)
 {
+	printk("[ATTRIBUTE] handle %u\n", handle);
 	int err;
 	write_params.func = written;
 	write_params.handle = handle;
@@ -39,7 +42,7 @@ void write(struct bt_conn *conn, uint16_t handle)
 	err = bt_gatt_write(conn, &write_params);
 	if (err)
 	{
-		printk("Failed to write\n");
+		printk("Failed to write (err %d)\n", err);
 	}
 }
 
@@ -56,7 +59,8 @@ static uint8_t discover_func(struct bt_conn *conn,
 	}
 
 	printk("[ATTRIBUTE] handle %u\n", attr->handle);
-	write(conn, attr->handle + 1);
+	att_handle = attr->handle + 2;
+	write(conn, att_handle);
 
 	return BT_GATT_ITER_STOP;
 }
