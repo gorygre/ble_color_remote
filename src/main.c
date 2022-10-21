@@ -19,6 +19,29 @@ static struct bt_uuid_16 uuid = BT_UUID_INIT_16(0);
 static struct bt_uuid_16 service_uuid = BT_UUID_INIT_16(0xFFE0);
 static struct bt_uuid_16 char_uuid = BT_UUID_INIT_16(0xFFE1);
 static struct bt_gatt_discover_params discover_params;
+static struct bt_gatt_write_params write_params;
+static char data[] = { 0x7E, 0x07, 0x05, 0x03, 0xFF, 0xFF, 0xFF, 0x00, 0xEF };
+
+void written(struct bt_conn *conn, uint8_t err, struct bt_gatt_write_params* params)
+{
+	printk("Write successful\n");
+	bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+}
+
+void write(struct bt_conn *conn, uint16_t handle)
+{
+	int err;
+	write_params.func = written;
+	write_params.handle = handle;
+	write_params.data = data;
+	write_params.length = sizeof(data);
+	write_params.offset = 0;
+	err = bt_gatt_write(conn, &write_params);
+	if (err)
+	{
+		printk("Failed to write\n");
+	}
+}
 
 static uint8_t discover_func(struct bt_conn *conn,
 			     const struct bt_gatt_attr *attr,
@@ -33,24 +56,7 @@ static uint8_t discover_func(struct bt_conn *conn,
 	}
 
 	printk("[ATTRIBUTE] handle %u\n", attr->handle);
-
-	if (!bt_uuid_cmp(discover_params.uuid, &service_uuid.uuid)) {
-		memcpy(&uuid, &char_uuid, sizeof(uuid));
-		discover_params.uuid = &uuid.uuid;
-		discover_params.start_handle = attr->handle + 1;
-		discover_params.type = BT_GATT_DISCOVER_CHARACTERISTIC;
-
-		printk("looking for characteristic\n");
-		err = bt_gatt_discover(conn, &discover_params);
-		if (err) {
-			printk("Discover failed (err %d)\n", err);
-		}
-	} else if (!bt_uuid_cmp(discover_params.uuid, &char_uuid.uuid)) {
-		// this is the characteristic we want to write
-		printk("Found the characteristic!\n");
-	} else {
-		printk("Unexpected path\n");
-	}
+	write(conn, attr->handle + 1);
 
 	return BT_GATT_ITER_STOP;
 }
